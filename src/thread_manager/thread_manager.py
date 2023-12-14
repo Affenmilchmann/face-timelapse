@@ -23,7 +23,7 @@ class ThreadManager:
         self.continue_running = True
         self.threads_started = False
 
-        logger.debug(f"ThreadManager: starting {self.thread_count} threads...")
+        logger.info(f"ThreadManager: starting {self.thread_count} threads...")
         for _ in range(self.thread_count):
             threading.Thread(
                 target=self.__worker
@@ -40,25 +40,24 @@ class ThreadManager:
         main_thread = threading.main_thread()
         thread_name = threading.current_thread().getName() + \
                       str(threading.current_thread().native_id)
-        logger.debug(f"{thread_name} started, main thread: {main_thread.name}\n" + \
-                     f"local threads: {threading.enumerate()}"
-        )
+        logger.info(f"{thread_name} started, main thread: {main_thread.name}")
+        logger.debug(f"{thread_name}: local threads: {threading.enumerate()}")
         while main_thread.is_alive() and self.continue_running:
             try:
                 item = self.queue.get(timeout=self.thread_timeout)
                 if isinstance(item, RenderItem):
-                    logger.debug(f"{thread_name} rendering {item.token}")
+                    logger.info(f"{thread_name} rendering {item.token}")
                     start_time = time()
                     item.render()
                     time_taken = time() - start_time
                     del self.item_index[item.token]
                     self.render_time_history.add(time_taken)
-                    logger.debug(f"{thread_name} finished {item.token}")
+                    logger.info(f"{thread_name} finished {item.token}")
                 else:
                     logger.debug(f"{thread_name} queue empty, waiting")
             except Exception as e:
                 logger.error(f"{thread_name}: {e}")
-        logger.debug(f"{thread_name} ended.\n" + \
+        logger.info(f"{thread_name} ended.\n" + \
                      f"main_thread.alive()={main_thread.is_alive()}\n" + \
                      f"continue_running={self.continue_running}")
 
