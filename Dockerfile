@@ -1,5 +1,7 @@
 FROM python:3.10-slim
 
+WORKDIR /home/translapse
+
 RUN apt -y update
 RUN apt -y upgrade
 RUN apt -y install libpq-dev python3-dev build-essential
