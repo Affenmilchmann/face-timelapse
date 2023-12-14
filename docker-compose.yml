@@ -5,6 +5,8 @@ services:
     image: translapse-image
     container_name: translapse
     restart: unless-stopped
+    environment:
+      SCRIPT_NAME: ${APP_ROOT}
     build: 
       context: .
     ports:
