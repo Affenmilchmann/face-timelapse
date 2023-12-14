@@ -21,7 +21,7 @@ def render_timelapse(
         str(photo_dir.joinpath(x))
         for x in sorted(listdir(photo_dir))
     ]
-    #photo_paths *= 20
+    #photo_paths *= 10
 
     # Pipeline
     # detecting faces

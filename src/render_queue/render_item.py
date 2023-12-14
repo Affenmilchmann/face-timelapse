@@ -2,34 +2,44 @@ from pathlib import Path
 from secrets import token_hex
 from typing import Union, Tuple
 from zipfile import ZipFile
+from dotenv import load_dotenv, find_dotenv
 import os
 
 import src.face_timelapse as ft
-from app import app
+
+load_dotenv(find_dotenv())
+config = {
+    'VID_DIR': os.getenv('VID_DIR', 'data/renders'),
+    'TMP_DIR': os.getenv('TMP_DIR', 'data/tmp'),
+    'UPLOAD_DIR': os.getenv('UPLOAD_DIR', 'data/archieves')
+}
 
 class RenderItem:
-    def __init__(self, filename) -> None:
-        self.filename = Path(filename)
+    def __init__(self) -> None:
+        self.root_dir = None
+        self.token = token_hex(16)
+        self.filename = Path(config['UPLOAD_DIR']).joinpath(f"{self.token}.zip")
+        self.status = 'Initialized'
+
+    def render(self) -> None:
         if not self.filename.is_file():
             raise ValueError("Recieved a non existant file")
-        self.secret = token_hex(16)
-        self.root_dir = None
-
-    def render(
-        self, 
-        work_dir: Union[str, os.PathLike] = None
-    ) -> None:
-        root_dir, img_dir, frame_dir = self.__prepare_dirs(self.secret)
+        self.status = 'Rendering'
+        _, img_dir, frame_dir = self.__prepare_dirs(self.token)
         # Unzipping a file
         with ZipFile(self.filename, 'r') as f:
             f.extractall(img_dir)
         if not RenderItem.__img_dir_valid(img_dir):
+            self.status = 'Failed'
             raise ValueError("Archive contained sub folders")
         video_path = ft.render_timelapse(
             img_dir, 
-            Path(app.config['VID_DIR']).joinpath(f'{self.secret}.mp4'),
+            Path(config['VID_DIR']).joinpath(f'{self.token}.mp4'),
             frame_dir
         )
+        self.status = 'Done'
+        self.wipe_dirs()
+        return video_path
 
     def __prepare_dirs(
         self,
@@ -50,7 +60,7 @@ class RenderItem:
         Returns:
             Tuple[Path, Path, Path]: `root_dir`, `img_dir`, `frame_dir`
         """
-        root_dir = Path(app.config['TMP_DIR']).joinpath(root_dir)
+        root_dir = Path(config['TMP_DIR']).joinpath(root_dir)
         os.mkdir(root_dir)
         self.root_dir = root_dir
         img_dir = root_dir.joinpath('img')
@@ -68,8 +78,8 @@ class RenderItem:
                 return False
         return True
 
-    @staticmethod
-    def __wipe_dirs(root_dir: Union[str, os.PathLike]) -> None:
+    def wipe_dirs(self) -> None:
+        if self.root_dir is None: return
         def rmdir(directory):
             directory = Path(directory)
             for item in directory.iterdir():
@@ -78,8 +88,10 @@ class RenderItem:
                 else:
                     item.unlink()
             directory.rmdir()
-        rmdir(root_dir)
+        if self.root_dir.exists():
+            rmdir(self.root_dir)
+        if self.filename.exists():
+            os.remove(self.filename)
 
     def __del__(self) -> None:
-        if not self.root_dir is None:
-            RenderItem.__wipe_dirs(self.root_dir)
+        self.wipe_dirs()
