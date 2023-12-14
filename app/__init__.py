@@ -9,6 +9,7 @@ load_dotenv(find_dotenv())
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(32)
+app.config['APPLICATION_ROOT'] = os.getenv('APP_ROOT', '/translapse')
 
 def env_load_dir(env_key, default, config_key = None):
     directory = os.getenv(env_key, default)
